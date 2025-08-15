@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CountryGuessr - AI World Guesser</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@300;400;500&display=swap');
+
+        :root {
+            --bg-color: #1a252f; 
+            --surface-color: rgba(30, 45, 60, 0.85); 
+            --panel-bg-color: rgba(25, 38, 50, 0.75);
+            
+            --border-color-main: #b08d57; 
+            --border-color-secondary: #4a6f80; 
+
+            --text-color-primary: #e8e0d0; 
+            --text-color-secondary: #90a0b0; 
+            
+            --accent-color-highlight: #e8c070; 
+            --accent-color-action: var(--border-color-main);
+
+            --success-color: #50c878; 
+            --error-color: #c84040;   
+            
+            --font-main-title: 'Poppins', sans-serif; 
+            --font-score-display: 'Poppins', sans-serif; 
+            --font-code: 'Roboto Mono', monospace;
+            --font-body: 'Poppins', sans-serif;
+
+            --shadow-color: rgba(0,0,0, 0.3);
+            --border-radius: 6px;
+        }
+
+        /* ... All CSS from the previous version remains IDENTICAL ... */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: var(--text-color-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background-color: var(--surface-color);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color-secondary);
+            box-shadow: 0 5px 25px var(--shadow-color);
+            padding: 30px 35px;
+            width: 100%;
+            max-width: 750px;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-family: var(--font-main-title); 
+            font-weight: 700; 
+            color: var(--text-color-primary);
+            text-shadow: 0 0 8px var(--accent-color-highlight);
+            margin-bottom: 10px;
+            font-size: 2.4em; 
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            font-family: var(--font-body);
+            font-size: 1em;
+            margin-bottom: 30px;
+            color: var(--text-color-secondary);
+            font-weight: 300;
+        }
+        
+        .modal-overlay { display: none !important; }
+        #apiSettingsButton { display: none !important; }
+
+        input[type="password"], input[type="text"].guess-input {
+            width: 100%; padding: 12px 15px;
+            border: 1px solid var(--border-color-secondary); border-radius: 4px;
+            background-color: rgba(10, 20, 30, 0.6); 
+            color: var(--text-color-primary); font-size: 1em;
+            font-family: var(--font-code); 
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input[type="password"]:focus, input[type="text"].guess-input:focus {
+            outline: none; border-color: var(--accent-color-highlight);
+            box-shadow: 0 0 8px var(--accent-color-highlight);
+        }
+
+        button {
+            background-color: var(--accent-color-action);
+            color: var(--bg-color); 
+            border: 1px solid var(--accent-color-action);
+            padding: 10px 20px; border-radius: 4px;
+            font-family: var(--font-body); font-weight: 600; 
+            font-size: 0.95em; cursor: pointer;
+            transition: all 0.2s ease; margin: 5px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        
+        button:hover:not(:disabled) {
+            background-color: var(--accent-color-highlight);
+            border-color: var(--accent-color-highlight);
+            color: var(--bg-color); transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(232, 192, 112, 0.2);
+        }
+        button:active:not(:disabled) { transform: translateY(0px); filter: brightness(0.95); }
+        button:disabled {
+            background-color: #3a4a58; border-color: #3a4a58;
+            color: #708090; cursor: not-allowed; box-shadow: none;
+        }
+        
+        .game-area { display: block; }
+        
+        .game-controls {
+            background-color: var(--panel-bg-color);
+            border: 1px solid var(--border-color-secondary);
+            border-radius: var(--border-radius); padding: 15px; 
+            margin-bottom: 25px; display: flex;
+            flex-wrap: wrap; 
+            justify-content: space-between; align-items: center;
+            gap: 15px; 
+        }
+        .stat-item { 
+            text-align: center;
+            font-family: var(--font-body);
+            font-size: 0.95em;
+            min-width: 80px; 
+        }
+        .stat-item .label {
+            font-size: 0.8em;
+            color: var(--text-color-secondary);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .stat-item .value {
+            font-family: var(--font-score-display); 
+            font-weight: 700;
+            font-size: 1.3em;
+            color: var(--text-color-primary);
+        }
+        .stat-item .value.accent { color: var(--accent-color-highlight); }
+
+
+        .score-display span { color: var(--accent-color-highlight); }
+        
+        .difficulty-section { text-align: center; }
+        .difficulty-section label {
+            font-size: 0.8em; margin-bottom: 4px; display: block;
+            font-family: var(--font-body); color: var(--text-color-secondary);
+        }
+        .difficulty-slider-container span {
+            font-size: 0.8em; font-family: var(--font-body);
+            color: var(--text-color-secondary);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100px; height: 4px; 
+            background: var(--border-color-secondary); border-radius: 2px;
+            outline: none; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; 
+            background: var(--accent-color-highlight); border-radius: 50%;
+            cursor: pointer; border: 2px solid var(--surface-color); 
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 14px; height: 14px;
+            background: var(--accent-color-highlight); border-radius: 50%; 
+            cursor: pointer; border: 2px solid var(--surface-color);
+        }
+
+        .hints-container {
+            background-color: var(--panel-bg-color);
+            border: 1px solid var(--border-color-secondary);
+            border-radius: var(--border-radius); padding: 20px;
+            text-align: left; min-height: 140px; margin-bottom: 25px;
+            font-family: var(--font-code); 
+        }
+
+        .hint {
+            padding: 10px 12px; margin-bottom: 8px;
+            opacity: 0; transform: translateY(10px);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+            font-size: 0.95em; line-height: 1.6;
+            color: var(--text-color-primary);
+            background-color: rgba(10, 20, 30, 0.4); 
+            border-left: 3px solid var(--border-color-main); 
+            border-radius: 4px;
+        }
+        .hint:last-child { margin-bottom: 0; }
+        .hint.visible { opacity: 1; transform: translateY(0); }
+        
+        .guess-input-container { position: relative; margin-bottom: 20px; }
+
+        .suggestions-list {
+            position: absolute; bottom: 100%; margin-bottom: 0px; 
+            left: 0px;  right: 0px; 
+            background-color: var(--panel-bg-color);
+            border: 1px solid var(--border-color-secondary); border-bottom: none; 
+            border-radius: 4px 4px 0 0; max-height: 150px; 
+            overflow-y: auto; z-index: 1000; display: none; 
+            box-shadow: 0 -3px 10px rgba(0,0,0,0.2);
+            font-family: var(--font-code); 
+        }
+        .suggestions-list::-webkit-scrollbar { width: 5px; }
+        .suggestions-list::-webkit-scrollbar-track { background: var(--bg-color); }
+        .suggestions-list::-webkit-scrollbar-thumb { background: var(--border-color-secondary); }
+
+        .suggestion-item {
+            padding: 8px 12px; cursor: pointer;
+            font-size: 0.9em; color: var(--text-color-secondary);
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .suggestion-item:not(:last-child) {
+             border-bottom: 1px solid var(--border-color-secondary);
+        }
+        .suggestion-item:hover, .suggestion-item.active {
+            background-color: var(--accent-color-action);
+            color: var(--bg-color);
+        }
+
+        .feedback {
+            margin-top: 20px; font-size: 1.05em; 
+            font-weight: 500; min-height: 28px;
+            font-family: var(--font-body);
+        }
+        .feedback.correct { color: var(--success-color); }
+        .feedback.incorrect { color: var(--error-color); }
+        .feedback.info {
+            color: var(--text-color-secondary);
+            font-size: 0.9em; font-weight: 400;
+        }
+
+        .loader { 
+            width: 36px; height: 36px; 
+            margin: 25px auto; display: none; 
+            border: 3px solid var(--border-color-secondary);
+            border-top: 3px solid var(--accent-color-highlight);
+            border-radius: 50%;
+            animation: spinGeo 1s linear infinite;
+        }
+        @keyframes spinGeo { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .footer-links { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CountryGuessr</h1> 
+        <p class="subtitle">Uncover the World, One Clue at a Time.</p>
+
+        <div class="game-area" id="gameArea">
+            <div class="game-controls">
+                <div class="stat-item">
+                    <span class="label">Score</span>
+                    <span class="value" id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Streak</span>
+                    <span class="value accent" id="streak">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Accuracy</span>
+                    <span class="value accent" id="accuracy">N/A</span>
+                </div>
+                <div class="difficulty-section">
+                    <label for="difficultySlider">Difficulty: <span id="difficultyLabel">Medium</span></label>
+                    <div class="difficulty-slider-container">
+                        <span>Easy</span> 
+                        <input type="range" id="difficultySlider" min="0" max="2" value="1">
+                        <span>Hard</span> 
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hints-container" id="hintsContainer"></div>
+            <div class="loader" id="loader"></div>
+            
+            <div class="guess-input-container">
+                <input type="text" id="guessInput" class="guess-input" placeholder="Enter country name..." autocomplete="off"> 
+                <div id="suggestionsList" class="suggestions-list"></div>
+            </div>
+            
+            <div class="action-buttons" style="margin-top: 10px;">
+                <button id="guessButton">Guess</button> 
+                <button id="moreHintsButton" title="Get 2 more hints (-1 Pts)">More Hints</button> 
+                <button id="nextRoundButton" style="display: none;">Next Country</button> 
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+        </div>
+    </div>
+    <div class="footer-links"></div>
+
+    <script>
+        const countries = [ /* ... Same country list ... */ 
+            "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
+            "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia",
+            "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia",
+            "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo, Democratic Republic of the",
+            "Congo, Republic of the", "Costa Rica", "Cote d'Ivoire", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti",
+            "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini",
+            "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala",
+            "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+            "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia",
+            "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia",
+            "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco",
+            "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand",
+            "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama",
+            "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda",
+            "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe",
+            "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands",
+            "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland",
+            "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia",
+            "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay",
+            "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+        ];
+        
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=";
+        const apiKey = "AIzaSyC7KfxkrT3RycdcWIcARrSro9iRbU9KyLU"; 
+        
+        const gameArea = document.getElementById('gameArea');
+        const scoreDisplay = document.getElementById('score');
+        const streakDisplay = document.getElementById('streak');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const difficultySlider = document.getElementById('difficultySlider');
+        const difficultyLabel = document.getElementById('difficultyLabel');
+        const hintsContainer = document.getElementById('hintsContainer');
+        const loader = document.getElementById('loader');
+        const guessInput = document.getElementById('guessInput');
+        const suggestionsList = document.getElementById('suggestionsList'); 
+        const guessButton = document.getElementById('guessButton');
+        const moreHintsButton = document.getElementById('moreHintsButton');
+        const nextRoundButton = document.getElementById('nextRoundButton');
+        const feedback = document.getElementById('feedback');
+
+        let currentCountry = null;
+        let score = 0;
+        let currentStreak = 0;
+        let totalCorrectGuesses = 0;
+        let totalRoundsPlayed = 0;
+        let currentHints = [];
+        let additionalHintsRequests = 0;
+        const MAX_ADDITIONAL_HINTS_REQUESTS = 2;
+        const HINTS_PER_ADDITIONAL_REQUEST = 2;
+        let currentSuggestionIndex = -1; 
+        let canProceedToNextRoundViaKeyboard = true; 
+
+        const difficultyLevels = ["Easy", "Medium", "Hard"]; 
+
+        function updateStatsDisplay() {
+            scoreDisplay.textContent = score;
+            streakDisplay.textContent = currentStreak;
+            if (totalRoundsPlayed > 0) {
+                const accuracy = (totalCorrectGuesses / totalRoundsPlayed) * 100;
+                accuracyDisplay.textContent = accuracy.toFixed(1) + "%";
+            } else {
+                accuracyDisplay.textContent = "N/A";
+            }
+        }
+
+        function updateDifficultyLabel() {
+            difficultyLabel.textContent = difficultyLevels[difficultySlider.value];
+        }
+
+        function init() {
+            if (!apiKey) {
+                console.error("CRITICAL: API Key is not defined. Game cannot start.");
+                alert("CRITICAL ERROR: API Key is missing in the code. Game cannot function.");
+                gameArea.style.display = 'none';
+                return;
+            }
+            gameArea.style.display = 'block';
+            updateStatsDisplay();
+            startNewRound();
+
+            difficultySlider.addEventListener('input', updateDifficultyLabel);
+            updateDifficultyLabel(); 
+            guessButton.addEventListener('click', handleGuess);
+            guessInput.addEventListener('input', handleInputForSuggestions);
+            guessInput.addEventListener('keydown', handleKeyDownForSuggestions);
+            document.addEventListener('click', (event) => { 
+                if (!guessInput.contains(event.target) && 
+                    !suggestionsList.contains(event.target) &&
+                    event.target !== guessInput) {
+                    suggestionsList.innerHTML = '';
+                    suggestionsList.style.display = 'none';
+                    currentSuggestionIndex = -1;
+                }
+            });
+            moreHintsButton.addEventListener('click', handleMoreHints);
+            nextRoundButton.addEventListener('click', startNewRound);
+            
+            document.addEventListener('keydown', function(event) {
+                if (nextRoundButton.style.display !== 'none' && (event.key === 'Enter' || event.key === 'Tab')) {
+                    const activeElement = document.activeElement;
+                    if (activeElement === guessInput || (activeElement && activeElement.tagName === 'BUTTON' && activeElement !== nextRoundButton)) {
+                        return; 
+                    }
+                    if (!canProceedToNextRoundViaKeyboard) { 
+                        event.preventDefault(); 
+                        return; 
+                    }
+                    event.preventDefault(); 
+                    startNewRound();
+                }
+            });
+        }
+        
+        function handleInputForSuggestions() { /* ... no changes ... */ 
+            const inputText = guessInput.value.toLowerCase();
+            suggestionsList.innerHTML = '';
+            currentSuggestionIndex = -1; 
+            if (inputText.length === 0) {
+                suggestionsList.style.display = 'none';
+                return;
+            }
+            const filteredCountries = countries.filter(country =>
+                country.toLowerCase().startsWith(inputText)
+            ).slice(0, 5); 
+            if (filteredCountries.length > 0) {
+                filteredCountries.forEach((country) => {
+                    const item = document.createElement('div');
+                    item.classList.add('suggestion-item');
+                    item.textContent = country;
+                    item.addEventListener('click', () => {
+                        guessInput.value = country;
+                        suggestionsList.innerHTML = '';
+                        suggestionsList.style.display = 'none';
+                        currentSuggestionIndex = -1;
+                        guessInput.focus(); 
+                    });
+                    suggestionsList.appendChild(item);
+                });
+                suggestionsList.style.display = 'block';
+            } else {
+                suggestionsList.style.display = 'none';
+            }
+        }
+        function handleKeyDownForSuggestions(event) { /* ... no changes ... */ 
+            const items = suggestionsList.querySelectorAll('.suggestion-item');
+            if (suggestionsList.style.display !== 'none' && items.length > 0) {
+                switch (event.key) {
+                    case 'Enter': 
+                        event.preventDefault();
+                        const activeItemForEnter = suggestionsList.querySelector('.suggestion-item.active');
+                        if (activeItemForEnter) guessInput.value = activeItemForEnter.textContent;
+                        else guessInput.value = items[0].textContent;
+                        suggestionsList.innerHTML = ''; suggestionsList.style.display = 'none'; currentSuggestionIndex = -1;
+                        handleGuess(); 
+                        break;
+                    case 'Tab': 
+                        event.preventDefault();
+                        const activeItemForTab = suggestionsList.querySelector('.suggestion-item.active');
+                        if (activeItemForTab) guessInput.value = activeItemForTab.textContent;
+                        else guessInput.value = items[0].textContent;
+                        suggestionsList.innerHTML = ''; suggestionsList.style.display = 'none'; currentSuggestionIndex = -1;
+                        guessInput.focus(); 
+                        break;
+                    case 'ArrowDown':
+                        event.preventDefault();
+                        if (currentSuggestionIndex < items.length - 1) currentSuggestionIndex++;
+                        else currentSuggestionIndex = 0; 
+                        updateActiveSuggestion(items);
+                        break;
+                    case 'ArrowUp':
+                        event.preventDefault();
+                        if (currentSuggestionIndex > 0) currentSuggestionIndex--;
+                        else if (currentSuggestionIndex === 0) currentSuggestionIndex = items.length - 1; 
+                        else currentSuggestionIndex = items.length -1;
+                        updateActiveSuggestion(items);
+                        break;
+                    case 'Escape':
+                        event.preventDefault();
+                        suggestionsList.innerHTML = ''; suggestionsList.style.display = 'none'; currentSuggestionIndex = -1;
+                        break;
+                }
+            } else if (event.key === 'Enter' && !guessInput.disabled && guessInput.value.trim() !== '') { 
+                event.preventDefault();
+                handleGuess();
+            }
+        }
+        function updateActiveSuggestion(items) { /* ... no changes ... */ 
+            items.forEach(item => item.classList.remove('active'));
+            if (currentSuggestionIndex >= 0 && currentSuggestionIndex < items.length) {
+                items[currentSuggestionIndex].classList.add('active');
+            }
+        }
+
+        async function fetchHints(countryName, isAdditional = false, existingHintsText = "") {
+            if (!apiKey) {
+                feedback.textContent = "API Key is missing. Game cannot fetch hints.";
+                feedback.className = 'feedback error';
+                return null;
+            }
+            loader.style.display = 'block';
+            if(!isAdditional) hintsContainer.innerHTML = 'Fetching hints...';
+            else {
+                if (currentHints.length === 0) hintsContainer.innerHTML = 'Fetching hints...';
+            }
+            currentHints = isAdditional ? currentHints : [];
+
+            const difficulty = difficultyLevels[difficultySlider.value];
+            let promptText;
+            const numHintsToFetch = isAdditional ? HINTS_PER_ADDITIONAL_REQUEST : 3;
+            let difficultyDescriptor = "distinct and progressively revealing";
+             if (difficulty === "Easy") difficultyDescriptor = "easy-to-understand, common knowledge, focusing on widely known geographical or cultural facts";
+            else if (difficulty === "Hard") difficultyDescriptor = "challenging, obscure, or nuanced, possibly about specific historical events, niche exports, or lesser-known cultural aspects";
+            
+            if (isAdditional) {
+                promptText = `The user is trying to guess the country "${countryName}". They have already received the following clues:\n${existingHintsText}\nGenerate ${numHintsToFetch} NEW and DISTINCT clues for this country. The new clues must not repeat information from the previous ones. Focus on providing ${difficulty.toLowerCase()} difficulty clues. Provide the clues as a simple text list, each on a new line, without numbering or bullet points. Do NOT mention the country's name.`;
+            } else {
+                // MODIFIED: Removed creative flair instruction
+                promptText = `Generate 3 ${difficultyDescriptor} clues for guessing the country: "${countryName}". Each clue should be a short, factual statement. Provide the clues as a simple text list, each on a new line, without numbering or bullet points. Do NOT mention the country's name or any part of its name in the clues.`;
+            }
+
+            try {
+                const response = await fetch(GEMINI_API_URL + apiKey, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 180 } // Slightly lower temp for more factual
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("API Error:", errorData);
+                    let userMessage = `API Error (${response.status}).`; 
+                    if (response.status === 400 || response.status === 403 || (errorData.error && errorData.error.message.toLowerCase().includes("api key"))) {
+                        userMessage = `Fixed API Key is invalid or API not enabled. Please check the hardcoded key.`; 
+                    } else if (errorData.error && errorData.error.message) {
+                        userMessage += ` ${errorData.error.message}`;
+                    }
+                    throw new Error(userMessage);
+                }
+                const data = await response.json();
+                 if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+                    if (!isAdditional || (isAdditional && hintsContainer.innerHTML.includes('Fetching hints...'))) {
+                        hintsContainer.innerHTML = ''; 
+                    }
+                    return data.candidates[0].content.parts[0].text.split('\n').map(h => h.trim()).filter(h => h.length > 0);
+                } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+                     throw new Error(`Hints blocked by API: ${data.promptFeedback.blockReason}. Try a different difficulty or country.`);
+                }else {
+                    console.error("Unexpected API response structure:", data);
+                    throw new Error("Could not parse hints: Unexpected response structure.");
+                }
+            } catch (error) {
+                console.error("Error fetching hints:", error);
+                if (hintsContainer.innerHTML.includes('Fetching hints...')) hintsContainer.innerHTML = '';
+                feedback.textContent = `${error.message}`;
+                feedback.className = 'feedback error';
+                return null;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+        function displayHintsBatch(hintsArray, isNewBatch = false) { /* ... no changes ... */ 
+            if (!hintsArray || hintsArray.length === 0) {
+                if (hintsContainer.children.length === 0) { 
+                    const p = document.createElement('p');
+                    p.textContent = "No hints available for this query.";
+                    p.className = 'feedback info'; 
+                    hintsContainer.appendChild(p);
+                }
+                return false; 
+            }
+            hintsArray.forEach((hintText, index) => {
+                if (!isNewBatch && currentHints.includes(hintText)) return;
+                if (isNewBatch && currentHints.includes(hintText)) return;
+                if (!currentHints.includes(hintText)) currentHints.push(hintText);
+                const hintElement = document.createElement('div');
+                hintElement.classList.add('hint');
+                hintElement.textContent = hintText;
+                hintsContainer.appendChild(hintElement);
+                setTimeout(() => {
+                     requestAnimationFrame(() => hintElement.classList.add('visible'));
+                }, (index + 1) * 150); 
+            });
+            return true; 
+        }
+        async function startNewRound() { /* ... no changes ... */ 
+            canProceedToNextRoundViaKeyboard = true; 
+            currentCountry = countries[Math.floor(Math.random() * countries.length)];
+            console.log("Target Country:", currentCountry); 
+            feedback.textContent = ''; feedback.className = 'feedback';
+            guessInput.value = ''; guessInput.disabled = false;
+            suggestionsList.innerHTML = ''; suggestionsList.style.display = 'none'; currentSuggestionIndex = -1;
+            guessButton.style.display = 'inline-block'; guessButton.disabled = true; 
+            moreHintsButton.style.display = 'inline-block'; moreHintsButton.disabled = true;
+            additionalHintsRequests = 0;
+            nextRoundButton.style.display = 'none';
+            
+            const initialHints = await fetchHints(currentCountry);
+            if (initialHints && initialHints.length > 0) {
+                displayHintsBatch(initialHints); 
+                guessButton.disabled = false; moreHintsButton.disabled = false;
+                guessInput.focus(); 
+            } else {
+                nextRoundButton.style.display = 'inline-block'; nextRoundButton.focus(); 
+                 if (!initialHints && apiKey) { 
+                    feedback.textContent = "Failed to get hints. Check API Key or network connection.";
+                    feedback.className = 'feedback error';
+                }
+            }
+        }
+        async function handleMoreHints() { /* ... no changes ... */ 
+            if (additionalHintsRequests >= MAX_ADDITIONAL_HINTS_REQUESTS) {
+                feedback.textContent = "Maximum additional hints reached.";
+                feedback.className = 'feedback info';
+                moreHintsButton.disabled = true;
+                return;
+            }
+            moreHintsButton.disabled = true; score--; updateStatsDisplay();
+            feedback.textContent = "Requesting more hints... (-1 point)";
+            feedback.className = 'feedback info';
+            const existingHintsText = currentHints.join('\n');
+            const newHints = await fetchHints(currentCountry, true, existingHintsText);
+
+            if (newHints && newHints.length > 0) {
+                displayHintsBatch(newHints, true); 
+                additionalHintsRequests++;
+                if (additionalHintsRequests >= MAX_ADDITIONAL_HINTS_REQUESTS) {
+                    moreHintsButton.disabled = true;
+                    feedback.textContent = "Maximum additional hints reached.";
+                } else {
+                    moreHintsButton.disabled = false; 
+                    feedback.textContent = "More hints added (-1 point).";
+                }
+            } else {
+                score++; updateStatsDisplay();
+                feedback.textContent = "Could not get additional hints.";
+                 if (additionalHintsRequests < MAX_ADDITIONAL_HINTS_REQUESTS) {
+                    moreHintsButton.disabled = false;
+                }
+            }
+            guessInput.focus();
+        }
+
+        function handleGuess() { /* ... no changes ... */ 
+            suggestionsList.innerHTML = ''; suggestionsList.style.display = 'none'; currentSuggestionIndex = -1;
+            const userGuess = guessInput.value.trim();
+            if (!userGuess || !currentCountry || guessInput.disabled) return;
+
+            totalRoundsPlayed++; 
+
+            const normalizedGuess = userGuess.toLowerCase();
+            const normalizedCountry = currentCountry.toLowerCase();
+
+            if (normalizedGuess === normalizedCountry) {
+                feedback.textContent = `Correct! It was ${currentCountry}. Well done!`;
+                feedback.className = 'feedback correct';
+                score += 3; 
+                currentStreak++; 
+                totalCorrectGuesses++; 
+            } else {
+                feedback.textContent = `Incorrect. The answer was ${currentCountry}.`;
+                feedback.className = 'feedback incorrect';
+                currentStreak = 0; 
+            }
+            updateStatsDisplay(); 
+            guessInput.disabled = true; guessButton.style.display = 'none';
+            moreHintsButton.style.display = 'none'; nextRoundButton.style.display = 'inline-block';
+            nextRoundButton.focus(); 
+            canProceedToNextRoundViaKeyboard = false;
+            setTimeout(() => { canProceedToNextRoundViaKeyboard = true; }, 100); 
+        }
+        
+        init();
+    </script>
+</body>
+</html>
